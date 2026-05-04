@@ -1,6 +1,6 @@
 # Prompt Eval Commands
 
-Three Claude Code slash commands for evaluating and improving AI prompts. Based on the ML evaluation framework: ground truth, LLM-as-judge, human review, metrics, iterate.
+Four Claude Code slash commands for evaluating and improving AI prompts. Based on the ML evaluation framework: ground truth, LLM-as-judge, human review, metrics, iterate.
 
 Use these whenever you want to know if a prompt is working — and where to fix it.
 
@@ -27,6 +27,12 @@ Analyze the results. Calculates accuracy metrics, identifies the dominant failur
 
 Shows key findings inline so you don't have to open the file.
 
+### `/eval-track [name]`
+Log the run to the tracker. Reads from `results.csv`, `EVAL.md`, and `analysis.md` to compute metrics, then asks you what changed and what's worth flagging. Appends one row to:
+- `evals/eval-tracker.csv`
+
+The tracker accumulates across all runs and versions so you can see what's improving, what's regressing, and what failure patterns keep showing up.
+
 ---
 
 ## The loop
@@ -36,9 +42,11 @@ Shows key findings inline so you don't have to open the file.
 # fill in ground-truth.csv  # add your labeled examples (12 minimum)
 /eval-run [name]            # score everything
 /eval-analyze [name]        # see what's wrong and what to fix
+/eval-track [name]          # log the run to the tracker
 # update the prompt
 /eval-run [name]            # re-run
 /eval-analyze [name]        # compare to baseline
+/eval-track [name]          # log again — delta_vs_prev shows the trend
 ```
 
 ---
@@ -47,29 +55,49 @@ Shows key findings inline so you don't have to open the file.
 
 **On your own machine (global — works in any project):**
 ```
-cp eval-setup.md eval-run.md eval-analyze.md ~/.claude/commands/
+cp eval-setup.md eval-run.md eval-analyze.md eval-track.md ~/.claude/commands/
 ```
 
 **In a specific project (shared with anyone who clones the repo):**
 ```
 mkdir -p your-project/.claude/commands
-cp eval-setup.md eval-run.md eval-analyze.md your-project/.claude/commands/
+cp eval-setup.md eval-run.md eval-analyze.md eval-track.md your-project/.claude/commands/
 ```
 
 ---
 
 ## Output file structure
 
-When you run these commands, they create files relative to your working directory:
-
 ```
 evals/
+  eval-tracker.csv           ← all runs across all evals (created by /eval-track)
   [name]/
-    EVAL.md            ← spec (created by /eval-setup)
-    ground-truth.csv   ← your labeled examples (you fill this in)
-    results.csv        ← scoring run output (created by /eval-run)
-    analysis.md        ← findings + recommendation (created by /eval-analyze)
+    EVAL.md                  ← spec (created by /eval-setup)
+    ground-truth.csv         ← your labeled examples (you fill this in)
+    results.csv              ← scoring run output (created by /eval-run)
+    analysis.md              ← findings + recommendation (created by /eval-analyze)
 ```
+
+---
+
+## Tracker schema
+
+`eval-tracker.csv` has one row per eval run:
+
+| Column | What it captures |
+|---|---|
+| `date` | When the run happened |
+| `skill` | Which prompt was evaluated (e.g. `scoring`, `conversation`) |
+| `prompt_version` | Version label (e.g. `v1`, `v3-tighter-rubric`) |
+| `change_summary` | 1–2 sentences: what changed and why |
+| `n_tested` | Number of examples scored |
+| `correct_pct` | % judged correct |
+| `partial_pct` | % judged partial |
+| `pass_fail` | PASS / FAIL vs the pass bar set in EVAL.md |
+| `delta_vs_prev` | Change in correct_pct vs the prior version of the same skill |
+| `dominant_failure` | One-sentence root cause from eval-analyze |
+| `notable_patterns` | Human-written: anything worth flagging for the team |
+| `results_file` | Path to the detailed results CSV |
 
 ---
 
